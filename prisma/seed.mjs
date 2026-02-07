@@ -44,23 +44,15 @@ function cuid() {
 
 console.log("Seeding database...");
 
-// Create admin users
-const users = [
-  { username: "admin", password: "admin123" },
-  { username: "test", password: "test" },
-];
-
-const insertUser = db.prepare(
-  "INSERT INTO User (id, username, passwordHash, createdAt) VALUES (?, ?, ?, datetime('now'))"
-);
-const checkUser = db.prepare("SELECT id FROM User WHERE username = ?");
-
-for (const user of users) {
-  if (!checkUser.get(user.username)) {
-    insertUser.run(cuid(), user.username, hashSync(user.password, 10));
-  }
+// Create admin user
+const passwordHash = hashSync("admin123", 10);
+const existingUser = db.prepare("SELECT id FROM User WHERE username = ?").get("admin");
+if (!existingUser) {
+  db.prepare(
+    "INSERT INTO User (id, username, passwordHash, createdAt) VALUES (?, ?, ?, datetime('now'))"
+  ).run(cuid(), "admin", passwordHash);
 }
-console.log("Admin users ready (admin/admin123, test/test)");
+console.log("Admin user ready (username: admin, password: admin123)");
 
 // Create categories
 const insertCat = db.prepare("INSERT INTO Category (id, name, slug) VALUES (?, ?, ?)");
