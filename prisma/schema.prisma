@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+model Game {
+  id          String       @id @default(cuid())
+  title       String
+  developer   String?
+  genre       String?
+  thumbnail   String?
+  robloxUrl   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  screenshots Screenshot[]
+}
+
+model Category {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  slug        String       @unique
+  screenshots Screenshot[]
+}
+
+model Screenshot {
+  id         String   @id @default(cuid())
+  imageUrl   String
+  caption    String?
+  gameId     String
+  categoryId String
+  createdAt  DateTime @default(now())
+  game       Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@index([gameId])
+  @@index([categoryId])
+}
