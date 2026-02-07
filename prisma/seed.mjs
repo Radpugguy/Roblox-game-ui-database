@@ -1,4 +1,4 @@
-import { DatabaseSync } from "node:sqlite";
+import Database from "better-sqlite3";
 import { hashSync } from "bcryptjs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbPath = path.join(__dirname, "dev.db");
 
-const db = new DatabaseSync(dbPath);
+const db = new Database(dbPath);
 
 const DEFAULT_CATEGORIES = [
   { name: "HUD & Gameplay", slug: "hud-gameplay" },
