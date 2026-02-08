@@ -7,17 +7,20 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const categorySlug = searchParams.get("category");
   const gameId = searchParams.get("gameId");
+  const tagSlugs = searchParams.getAll("tag");
 
   const screenshots = await prisma.screenshot.findMany({
     where: {
-      ...(categorySlug
-        ? { category: { slug: categorySlug } }
-        : {}),
+      ...(categorySlug ? { category: { slug: categorySlug } } : {}),
       ...(gameId ? { gameId } : {}),
+      ...(tagSlugs.length > 0
+        ? { tags: { some: { tag: { slug: { in: tagSlugs } } } } }
+        : {}),
     },
     include: {
       game: true,
       category: true,
+      tags: { include: { tag: { include: { tagGroup: true } } } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { imageUrl, caption, gameId, categoryId } = body;
+  const { imageUrl, caption, gameId, categoryId, tagIds } = body;
 
   if (!imageUrl || !gameId || !categoryId) {
     return NextResponse.json(
@@ -42,8 +45,24 @@ export async function POST(request: NextRequest) {
   }
 
   const screenshot = await prisma.screenshot.create({
-    data: { imageUrl, caption, gameId, categoryId },
-    include: { game: true, category: true },
+    data: {
+      imageUrl,
+      caption,
+      gameId,
+      categoryId,
+      ...(tagIds && tagIds.length > 0
+        ? {
+            tags: {
+              create: tagIds.map((tagId: string) => ({ tagId })),
+            },
+          }
+        : {}),
+    },
+    include: {
+      game: true,
+      category: true,
+      tags: { include: { tag: true } },
+    },
   });
 
   return NextResponse.json(screenshot, { status: 201 });

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { writeFile } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
 export async function POST(request: NextRequest) {
@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
   const uploadDir = path.join(process.cwd(), "public", "uploads");
   const filepath = path.join(uploadDir, filename);
 
+  await mkdir(uploadDir, { recursive: true });
   await writeFile(filepath, buffer);
 
   return NextResponse.json({ url: `/uploads/${filename}` });

@@ -4,12 +4,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
+interface TagInfo {
+  tag: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+}
+
 interface Screenshot {
   id: string;
   imageUrl: string;
   caption?: string | null;
   game: { id: string; title: string };
   category: { name: string; slug: string };
+  tags?: TagInfo[];
 }
 
 interface ScreenshotGridProps {
@@ -51,16 +60,24 @@ export default function ScreenshotGrid({
                   {screenshot.game.title}
                 </Link>
               )}
-              <div className="flex items-center justify-between mt-1">
+              <div className="flex items-center gap-2 flex-wrap mt-1">
                 <span className="text-xs bg-gray-700 text-gray-300 rounded px-2 py-0.5">
                   {screenshot.category.name}
                 </span>
-                {screenshot.caption && (
-                  <span className="text-xs text-gray-500 truncate ml-2">
-                    {screenshot.caption}
+                {screenshot.tags?.map((st) => (
+                  <span
+                    key={st.tag.id}
+                    className="text-xs bg-gray-800 text-gray-500 rounded px-1.5 py-0.5 border border-gray-700"
+                  >
+                    {st.tag.name}
                   </span>
-                )}
+                ))}
               </div>
+              {screenshot.caption && (
+                <span className="text-xs text-gray-500 truncate block mt-1">
+                  {screenshot.caption}
+                </span>
+              )}
             </div>
           </div>
         ))}
@@ -95,6 +112,11 @@ export default function ScreenshotGrid({
               <span className="text-gray-400">
                 {selectedImage.category.name}
               </span>
+              {selectedImage.tags && selectedImage.tags.length > 0 && (
+                <span className="text-gray-600 ml-2">
+                  {selectedImage.tags.map((st) => st.tag.name).join(", ")}
+                </span>
+              )}
               {selectedImage.caption && (
                 <p className="text-gray-500 text-sm mt-1">
                   {selectedImage.caption}

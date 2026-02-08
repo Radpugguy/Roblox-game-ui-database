@@ -12,7 +12,10 @@ export async function GET(
     where: { id },
     include: {
       screenshots: {
-        include: { category: true },
+        include: {
+          category: true,
+          tags: { include: { tag: { include: { tagGroup: true } } } },
+        },
         orderBy: { createdAt: "desc" },
       },
     },

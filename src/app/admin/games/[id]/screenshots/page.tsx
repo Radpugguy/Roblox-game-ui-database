@@ -5,6 +5,19 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
+interface TagGroup {
+  id: string;
+  name: string;
+  slug: string;
+  tags: Tag[];
+}
+
+interface Tag {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 interface Category {
   id: string;
   name: string;
@@ -16,6 +29,7 @@ interface Screenshot {
   imageUrl: string;
   caption: string | null;
   category: Category;
+  tags?: { tag: Tag }[];
 }
 
 interface Game {
@@ -32,9 +46,11 @@ export default function ManageScreenshotsPage() {
 
   const [game, setGame] = useState<Game | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [tagGroups, setTagGroups] = useState<TagGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [caption, setCaption] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
 
@@ -49,14 +65,22 @@ export default function ManageScreenshotsPage() {
       Promise.all([
         fetch(`/api/games/${gameId}`).then((r) => r.json()),
         fetch("/api/categories").then((r) => r.json()),
-      ]).then(([gameData, catData]) => {
+        fetch("/api/tags").then((r) => r.json()),
+      ]).then(([gameData, catData, tagData]) => {
         setGame(gameData);
         setCategories(catData);
+        setTagGroups(tagData);
         if (catData.length > 0) setSelectedCategory(catData[0].id);
         setLoading(false);
       });
     }
   }, [session, gameId]);
+
+  const toggleTag = (tagId: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+    );
+  };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +89,6 @@ export default function ManageScreenshotsPage() {
     setUploading(true);
 
     for (const file of Array.from(files)) {
-      // Upload the image
       const formData = new FormData();
       formData.append("file", file);
       const uploadRes = await fetch("/api/upload", {
@@ -77,7 +100,6 @@ export default function ManageScreenshotsPage() {
 
       const { url } = await uploadRes.json();
 
-      // Create screenshot entry
       await fetch("/api/screenshots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -86,6 +108,7 @@ export default function ManageScreenshotsPage() {
           caption: caption || null,
           gameId,
           categoryId: selectedCategory,
+          tagIds: selectedTags,
         }),
       });
     }
@@ -95,9 +118,9 @@ export default function ManageScreenshotsPage() {
     setGame(refreshed);
     setCaption("");
     setFiles(null);
+    setSelectedTags([]);
     setUploading(false);
 
-    // Reset file input
     const fileInput = document.getElementById(
       "screenshot-files"
     ) as HTMLInputElement;
@@ -207,6 +230,39 @@ export default function ManageScreenshotsPage() {
               className="w-full bg-gray-900 text-white rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:border-blue-500"
             />
           </div>
+
+          {/* Tag Selection */}
+          <div className="md:col-span-2">
+            <label className="block text-sm text-gray-400 mb-2">
+              Tags (optional)
+            </label>
+            {tagGroups.map((group) => (
+              <div key={group.id} className="mb-3">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  {group.name}
+                </h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {group.tags.map((tag) => {
+                    const isSelected = selectedTags.includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => toggleTag(tag.id)}
+                        className={`rounded px-3 py-1 text-xs border transition-colors ${
+                          isSelected
+                            ? "bg-blue-600 text-white border-blue-500"
+                            : "bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-600"
+                        }`}
+                      >
+                        {tag.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         <button
           type="submit"
@@ -233,23 +289,33 @@ export default function ManageScreenshotsPage() {
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               />
             </div>
-            <div className="p-3 flex items-center justify-between">
-              <div>
-                <span className="text-xs bg-gray-700 text-gray-300 rounded px-2 py-0.5">
-                  {screenshot.category.name}
-                </span>
-                {screenshot.caption && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {screenshot.caption}
-                  </p>
-                )}
+            <div className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs bg-gray-700 text-gray-300 rounded px-2 py-0.5">
+                    {screenshot.category.name}
+                  </span>
+                  {screenshot.tags?.map((st) => (
+                    <span
+                      key={st.tag.id}
+                      className="text-xs bg-gray-800 text-gray-500 rounded px-1.5 py-0.5 border border-gray-700"
+                    >
+                      {st.tag.name}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  onClick={() => handleDeleteScreenshot(screenshot.id)}
+                  className="text-sm text-red-400 hover:text-red-300 ml-2 flex-shrink-0"
+                >
+                  Delete
+                </button>
               </div>
-              <button
-                onClick={() => handleDeleteScreenshot(screenshot.id)}
-                className="text-sm text-red-400 hover:text-red-300"
-              >
-                Delete
-              </button>
+              {screenshot.caption && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {screenshot.caption}
+                </p>
+              )}
             </div>
           </div>
         ))}

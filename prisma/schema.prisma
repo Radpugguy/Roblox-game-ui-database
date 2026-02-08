@@ -30,19 +30,51 @@ model Category {
   id          String       @id @default(cuid())
   name        String       @unique
   slug        String       @unique
+  sortOrder   Int          @default(0)
   screenshots Screenshot[]
 }
 
+model TagGroup {
+  id        String @id @default(cuid())
+  name      String @unique
+  slug      String @unique
+  sortOrder Int    @default(0)
+  tags      Tag[]
+}
+
+model Tag {
+  id         String          @id @default(cuid())
+  name       String
+  slug       String          @unique
+  sortOrder  Int             @default(0)
+  tagGroupId String
+  tagGroup   TagGroup        @relation(fields: [tagGroupId], references: [id])
+  screenshots ScreenshotTag[]
+
+  @@index([tagGroupId])
+}
+
 model Screenshot {
-  id         String   @id @default(cuid())
+  id         String          @id @default(cuid())
   imageUrl   String
   caption    String?
   gameId     String
   categoryId String
-  createdAt  DateTime @default(now())
-  game       Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  category   Category @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime        @default(now())
+  game       Game            @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  category   Category        @relation(fields: [categoryId], references: [id])
+  tags       ScreenshotTag[]
 
   @@index([gameId])
   @@index([categoryId])
+}
+
+model ScreenshotTag {
+  screenshotId String
+  tagId        String
+  screenshot   Screenshot @relation(fields: [screenshotId], references: [id], onDelete: Cascade)
+  tag          Tag        @relation(fields: [tagId], references: [id])
+
+  @@id([screenshotId, tagId])
+  @@index([tagId])
 }
